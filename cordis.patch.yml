@@ -1,0 +1,16 @@
+# ============================================================================
+# dsh-anime-theme —— DSH bundle patch
+# ============================================================================
+# 插件的"挂载声明"。DSH 启动时按 bundle 层栈叠加各插件 patch，
+# 本文件把二次元主题插件插入 profile 的配置树（与 dsh-whale-widget 同一套机制）。
+#
+# 安装：
+#   Web 端:   dsh plugin --profile web add dsh-anime-theme
+#   桌面端:   desktop profile 由 Electron 应用独占管理，请在客户端会话里
+#             让 DSH 自己安装，或用客户端自带 pnpm 以 link 方式装入
+#             （详见 README「安装」一节）。
+# ============================================================================
+
+- insert:
+    - id: dsh-anime-theme
+      name: dsh-anime-theme

@@ -1,0 +1,37 @@
+{
+  "name": "dsh-anime-theme",
+  "version": "0.1.0",
+  "description": "DSH 二次元人物主题：壁纸 / 开屏动画 / 应用内图标。插件本体零图片素材，全部由用户在界面内自由上传与更换。",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "theme",
+    "anime",
+    "wallpaper",
+    "splash"
+  ],
+  "type": "module",
+  "main": "lib/index.js",
+  "files": [
+    "lib",
+    "assets",
+    "cordis.patch.yml",
+    "README.md",
+    "PROVENANCE.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-github-username/dsh-anime-theme.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-github-username/dsh-anime-theme/issues"
+  },
+  "homepage": "https://github.com/your-github-username/dsh-anime-theme#readme",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "license": "MIT"
+}

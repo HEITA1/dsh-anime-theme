@@ -1,0 +1,16 @@
+# 依赖与产物
+node_modules/
+pnpm-lock.yaml
+
+# 本地测试素材（用户的个人图片，不进版本库）
+test-images/
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+
+# 运行残留
+*.log
+.DS_Store
+Thumbs.db
