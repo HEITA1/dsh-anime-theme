@@ -10,7 +10,7 @@ DeepSeek Harness（DSH）二次元人物主题插件：**壁纸 / 开屏动画 /
 | 模块 | 说明 |
 |---|---|
 | 🖼 壁纸 | 全局背景层（`body::before`，不遮挡交互），透明度 0–100% 与高斯模糊 0–40px 可调 |
-| ✨ 开屏动画 | 打开界面时的全屏立绘开场，默认**电影质感**编排（由暗逐帧渐显 + 缓慢推近 + 光扫 + 胶片颗粒 + 上下黑边 + 淡入黑收尾），另有缩放渐显 / 上浮 / 闪烁 / 无动画四种预设，时长 0.6–15s，点击或任意按键跳过，可设为"每会话一次"并可随时重放 |
+| ✨ 开屏动画 | 支持**视频素材**（MP4/WebM，≤64MB，铺满全屏播放）与图片素材；图片模式默认**电影质感**编排（由暗逐帧渐显 + 缓慢推近 + 光扫 + 胶片颗粒 + 上下黑边 + 淡入黑收尾）；视频模式叠暗角与"点击任意处进入"呼吸提示，播完自动退场；另有缩放渐显 / 上浮 / 闪烁 / 无动画预设，时长 0.6–15s，点击或任意按键跳过，可设为"每会话一次"并可随时重放 |
 | 🧩 图标 | 应用内 favicon 替换 + 侧栏/顶栏品牌图标替换（内置启发式选择器，支持自定义 CSS 选择器） |
 | ⚙ 设置面板 | 界面左下角 🎨 悬浮按钮：上传素材、调参数、保存即生效，无需重启 |
 
@@ -65,7 +65,7 @@ dsh plugin --profile web add github:your-github-username/dsh-anime-theme
 - 主题配置与素材保存在 `%USERPROFILE%\.dsh\anime-theme\`（`config.json` + 图片文件），此外**不写任何路径**
 - 插件**不发起任何网络请求**；图片直接从本机 served 到本机界面
 - 写接口（上传 / 改配置）仅接受回环地址访问，并委托宿主信任栅栏，fail-closed
-- 上传按**魔数嗅探**校验格式，**拒绝 SVG**（可携带脚本）；文件名固定为 `<类别>.<扩展名>`，无路径穿越面
+- 上传按**魔数嗅探**校验格式（图片 jpg/png/gif/webp + 视频 mp4/webm），**拒绝 SVG**（可携带脚本）；图片 ≤8MB、视频 ≤64MB；文件名固定为 `<类别>.<扩展名>`，无路径穿越面
 - 插件不接触 API key / 凭据，配置文件中无任何敏感信息
 
 ## 已知限制
@@ -82,3 +82,12 @@ dsh plugin --profile web add github:your-github-username/dsh-anime-theme
 ## License
 
 代码 MIT，见 [LICENSE](LICENSE)。本仓库**不含任何图片素材**，素材政策见 [PROVENANCE.md](PROVENANCE.md)。
+
+## 开屏视频素材小贴士
+
+视频模式直接用浏览器解码播放：**推荐 H.264 编码的 MP4**（HEVC/H.265 在部分 Chromium/Electron 环境无法软解）。若素材是 HEVC 或带水印/黑边，可先用 ffmpeg 处理后再上传，例如：
+
+```bash
+# 裁掉左右黑边（各128px）+ 去除右上/左下/底部三处水印（delogo 区域按实际水印位置调整）+ 转 H.264
+ffmpeg -i in.mp4 -vf "crop=1024:576:128:0, delogo=x=772:y=10:w=246:h=56, delogo=x=2:y=540:w=95:h=34, delogo=x=450:y=515:w=135:h=38" -c:v libx264 -crf 20 -preset veryfast -pix_fmt yuv420p -an -movflags +faststart splash_clean.mp4
+```

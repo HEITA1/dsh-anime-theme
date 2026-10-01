@@ -14,3 +14,9 @@ test-images/
 *.log
 .DS_Store
 Thumbs.db
+*.mp4
+*.webm
+.cdp-*.mjs
+.cdp-*.png
+.check.mjs
+.hcheck.mjs

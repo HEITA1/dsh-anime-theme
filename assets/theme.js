@@ -127,6 +127,15 @@
       'mix-blend-mode:screen;filter:blur(6px)}' +
       '#dshat-splash .dshat-cine-grain{position:absolute;inset:-10%;z-index:2;pointer-events:none;opacity:.08;' +
       'background-image:' + GRAIN_URI + ';background-size:160px 160px;mix-blend-mode:overlay}' +
+      // —— 视频开屏（MP4/WebM 素材）：铺满 + 暗角 + 呼吸提示 ——
+      '#dshat-splash video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;background:#04060e}' +
+      '#dshat-splash .dshat-v-vignette{position:absolute;inset:0;z-index:2;pointer-events:none;' +
+      'background:radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.5) 100%)}' +
+      '#dshat-splash .dshat-v-hint{position:absolute;left:0;right:0;bottom:7%;z-index:3;text-align:center;' +
+      'color:rgba(255,255,255,.92);font-size:14px;letter-spacing:.35em;text-indent:.35em;' +
+      'text-shadow:0 2px 12px rgba(0,0,0,.85);opacity:0;' +
+      'animation:dshat-v-hint 2.6s ease-in-out 1.1s infinite}' +
+      '@keyframes dshat-v-hint{0%{opacity:0}22%{opacity:.95}62%{opacity:.95}100%{opacity:0}}' +
       '#dshat-splash.dshat-out{opacity:0;pointer-events:none}'
     document.head.appendChild(s)
   }
@@ -144,12 +153,34 @@
       var ms = Math.min(15000, Math.max(600, +cfg.splash.ms || 2200))
       var overlay = el('div')
       overlay.id = 'dshat-splash'
-      var img = el('img')
-      img.alt = ''
-      img.src = BASE + '/asset/splash?v=' + Date.now()
-      img.onerror = function () { overlay.remove() }   // 素材缺失 → 直接跳过（fail-open）
+      var isVideo = /\.(mp4|webm)$/i.test(cfg.splash.file || '')
+      var media = null
+      if (isVideo) {
+        // 视频开屏：素材本身会动（游戏 CG / MMD），叠游戏标题演出层。
+        var v = document.createElement('video')
+        v.src = BASE + '/asset/splash?v=' + Date.now()
+        v.muted = true
+        v.autoplay = true
+        v.playsInline = true
+        v.setAttribute('playsinline', '')
+        media = v
+        var vig = el('div'); vig.className = 'dshat-v-vignette'
+        var hint = el('div'); hint.className = 'dshat-v-hint'; hint.textContent = '点击任意处进入'
+        v.addEventListener('ended', function () { close() })
+        v.addEventListener('error', function () { overlay.remove() })   // 素材缺失/无法解码 → 跳过（fail-open）
+        overlay.appendChild(v)
+        overlay.appendChild(vig)
+        overlay.appendChild(hint)
+      } else {
+        media = el('img')
+        media.alt = ''
+        media.src = BASE + '/asset/splash?v=' + Date.now()
+        media.onerror = function () { overlay.remove() }   // 素材缺失 → 直接跳过（fail-open）
+      }
+      var img = media.tagName === 'IMG' ? media : null
       var animKey = ANIMS[cfg.splash.anim] ? cfg.splash.anim : 'cinematic'
-      if (animKey === 'cinematic') {
+      if (!isVideo) {
+        if (animKey === 'cinematic') {
         // 电影质感 = 多层编排：黑场 → 逐帧渐显（亮度/模糊/饱和一起爬升）+ 缓慢推近
         // → 中段斜向光扫 + 胶片颗粒 → 上下黑边夹住 → 收尾淡入黑，整体退场。
         var mark = el('div'); mark.className = 'dshat-cine-mark'
@@ -173,11 +204,13 @@
         img.style.animation = a.css ? a.css.replace('%T', ms + 'ms') : 'none'
         overlay.appendChild(img)
       }
+      }
       document.body.appendChild(overlay)
       var closed = false
       function close() {
         if (closed) return
         closed = true
+        try { var vv = overlay.querySelector('video'); if (vv) vv.pause() } catch (err) {}
         overlay.classList.add('dshat-out')
         setTimeout(function () { overlay.remove() }, 550)
         document.removeEventListener('keydown', onKey, true)
@@ -185,7 +218,8 @@
       function onKey() { close() }
       overlay.addEventListener('click', close)
       document.addEventListener('keydown', onKey, true)
-      setTimeout(close, ms + 250)
+      // 图片模式按时长退场；视频模式由 ended 触发，这里只挂兜底
+      setTimeout(close, isVideo ? 60000 : ms + 250)
     } catch (err) {}
   }
 
@@ -307,12 +341,16 @@
     function pick(kind) {  // 文件选择 + 上传
       var f = el('input')
       f.type = 'file'
-      f.accept = 'image/jpeg,image/png,image/gif,image/webp'
+      f.accept = kind === 'splash'
+        ? 'image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm'
+        : 'image/jpeg,image/png,image/gif,image/webp'
       f.style.cssText = 'flex:1;min-width:0'
       f.addEventListener('change', function () {
         var file = f.files && f.files[0]
         if (!file) return
-        if (file.size > 8 * 1024 * 1024) { alert('图片超过 8MB 上限'); return }
+        var isVideo = /\.(mp4|webm)$/i.test(file.name || '')
+        var cap = isVideo ? 64 : 8
+        if (file.size > cap * 1024 * 1024) { alert('文件超过 ' + cap + 'MB 上限'); return }
         file.arrayBuffer().then(function (buf) {
           return fetch(BASE + '/upload/' + kind, { method: 'POST', body: buf })
         }).then(function (r) { return r.json() }).then(function (j) {
