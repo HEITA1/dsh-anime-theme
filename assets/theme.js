@@ -43,12 +43,28 @@
       }
       var w = cfg.wallpaper
       styleEl.textContent =
+        // ① 把应用自身的背景令牌透明化（dsh-skin 同款思路）。!important 是必须的：
+        //    应用的样式表在运行期注入、排在我们之后，且深色主题挂在 body[data-ds-dark-theme] 上。
+        'body,body[data-ds-dark-theme]{' +
+        '--dsw-alias-bg-base:transparent !important;' +
+        '--dsw-alias-bg-layer-1:transparent !important;' +
+        '--dsw-alias-bg-layer-2:transparent !important;' +
+        '--dsw-alias-bg-layer-3:transparent !important;' +
+        '--dsw-alias-bg-layer-4:transparent !important;' +
+        '--dsw-alias-bg-module-platform:transparent !important;' +
+        '--dsw-alias-bg-l1:transparent !important;' +
+        '--dsw-alias-bg-l2:transparent !important;' +
+        // 桌面壳（Windows 标题栏模式）用 specific 系令牌画全屏底色，必须一并透明化
+        '--dsw-specific-sidebar-fill:transparent !important;' +
+        '--dsw-specific-menu:transparent !important}' +
+        // ③ 根元素背景直接透明（body 白底可能来自非令牌的字面色）
+        'html,body{background:transparent !important}' +
+        // ② 壁纸层：固定铺底、不拦截交互
         'body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;' +
         'background:url(' + BASE + '/asset/wallpaper?v=' + Date.now() + ') center/cover no-repeat;' +
         'opacity:' + (+w.opacity || 0) + ';' +
         (w.blur > 0 ? 'filter:blur(' + (+w.blur) + 'px);' : '') +
-        '}' +
-        '#app,#root,.dsh-root{position:relative;z-index:1}'
+        '}'
     } catch (err) {}
   }
 
@@ -129,25 +145,52 @@
   }
 
   // ----------------------------------------------------------- 应用内图标 --
+  var iconStyleEl = null
   function applyIcon() {
     try {
-      if (!cfg || !cfg.enabled || !cfg.icon || !cfg.icon.on || !cfg.icon.file) return
+      if (!iconStyleEl) {
+        iconStyleEl = document.createElement('style')
+        iconStyleEl.id = 'dshat-icon-style'
+        document.head.appendChild(iconStyleEl)
+      }
+      if (!cfg || !cfg.enabled || !cfg.icon || !cfg.icon.on || !cfg.icon.file) {
+        iconStyleEl.textContent = ''
+        // 撤销 JS 侧替换过的 favicon
+        var lk = $('link[rel*="icon"]')
+        if (lk && lk.getAttribute('data-dshat')) { lk.remove() }
+        return
+      }
       var href = BASE + '/asset/icon?v=' + Date.now()
       // ① favicon
       var link = $('link[rel*="icon"]')
       if (!link) {
         link = el('link')
         link.rel = 'icon'
+        link.setAttribute('data-dshat', '1')
         document.head.appendChild(link)
       }
       link.href = href
-      // ② 侧栏/顶栏品牌图标：按已知启发式选择器替换，自定义选择器优先
-      var sel = cfg.icon.selector ||
-        'aside img[alt*="logo" i], header img[alt*="logo" i], img[src*="logo" i], img[class*="logo" i]'
-      var imgs = document.querySelectorAll(sel)
-      for (var i = 0; i < imgs.length; i++) {
-        imgs[i].src = href
+      // ② 品牌图标。三种形态：
+      //    a. img[src*=logo] —— 直接换 src（React 管理的属性替换是安全的）
+      //    b. 内联 SVG 品牌（本应用的形态）—— 纯 CSS：隐藏 svg + 伪元素显示图片，
+      //       不增删 React 管辖的 DOM 节点，避免卸载冲突
+      //    c. 自定义 selector（高级）—— 用户在设置面板填写的 CSS 选择器
+      var iconCss = ''
+      var sel = (cfg.icon.selector || '').trim()
+      if (sel) {
+        iconCss += sel + '{display:none !important}' +
+          'body:has(' + sel + ') ' + sel.replace(/svg(?=[\s:\[]|$)/g, '') + '::before,' +
+          sel + '::before{content:"";display:inline-block;width:26px;height:26px;' +
+          'margin-right:8px;vertical-align:middle;background:url(' + href + ') center/contain no-repeat}'
+      } else {
+        iconCss +=
+          'img[src*="logo" i]{content:url(' + href + ')}' +
+          '[data-slot="sidebar.brand.mark"] svg{display:none}' +
+          '[data-slot="sidebar.brand.mark"]{display:inline-block !important;' +
+          'width:26px !important;height:26px !important;' +
+          'background:url(' + href + ') center/contain no-repeat !important}'
       }
+      iconStyleEl.textContent = iconCss
     } catch (err) {}
   }
 
@@ -163,9 +206,9 @@
       'position:fixed;left:14px;bottom:14px;z-index:' + PANEL_Z + ';width:34px;height:34px;' +
       'border-radius:50%;border:1px solid rgba(120,140,200,.35);background:rgba(20,26,48,.72);' +
       'color:#dbe4ff;font-size:16px;line-height:1;cursor:pointer;backdrop-filter:blur(8px);' +
-      'opacity:.35;transition:opacity .2s'
+      'opacity:.55;transition:opacity .2s'
     fab.addEventListener('mouseenter', function () { fab.style.opacity = '1' })
-    fab.addEventListener('mouseleave', function () { fab.style.opacity = '.35' })
+    fab.addEventListener('mouseleave', function () { fab.style.opacity = '.55' })
 
     var panel = el('div')
     panel.id = 'dshat-panel'
