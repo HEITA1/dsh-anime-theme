@@ -43,20 +43,28 @@
       }
       var w = cfg.wallpaper
       styleEl.textContent =
-        // ① 把应用自身的背景令牌透明化（dsh-skin 同款思路）。!important 是必须的：
-        //    应用的样式表在运行期注入、排在我们之后，且深色主题挂在 body[data-ds-dark-theme] 上。
+        // ① 分层透明化：主界面（base/layer-1/侧栏底色）透出壁纸；
+        //    二级窗口（layer-2/3/4、菜单）用 color-mix 保持 95-97% 近实底，保证弹窗文字可读。
+        //    !important 是必须的：应用的样式表在运行期注入、排在我们之后。
         'body,body[data-ds-dark-theme]{' +
         '--dsw-alias-bg-base:transparent !important;' +
         '--dsw-alias-bg-layer-1:transparent !important;' +
-        '--dsw-alias-bg-layer-2:transparent !important;' +
-        '--dsw-alias-bg-layer-3:transparent !important;' +
-        '--dsw-alias-bg-layer-4:transparent !important;' +
-        '--dsw-alias-bg-module-platform:transparent !important;' +
-        '--dsw-alias-bg-l1:transparent !important;' +
-        '--dsw-alias-bg-l2:transparent !important;' +
-        // 桌面壳（Windows 标题栏模式）用 specific 系令牌画全屏底色，必须一并透明化
         '--dsw-specific-sidebar-fill:transparent !important;' +
-        '--dsw-specific-menu:transparent !important}' +
+        '--dsw-alias-bg-l1:transparent !important;' +
+        '--dsw-alias-bg-layer-2:color-mix(in srgb, var(--dsw-static-neutral-bluish-00,#fff) 95%, transparent) !important;' +
+        '--dsw-alias-bg-layer-3:color-mix(in srgb, var(--dsw-static-neutral-bluish-00,#fff) 96%, transparent) !important;' +
+        '--dsw-alias-bg-layer-4:color-mix(in srgb, var(--dsw-static-neutral-bluish-00,#fff) 97%, transparent) !important;' +
+        '--dsw-alias-bg-module-platform:color-mix(in srgb, var(--dsw-static-neutral-bluish-00,#fff) 95%, transparent) !important;' +
+        '--dsw-specific-menu:color-mix(in srgb, var(--dsw-static-neutral-bluish-00,#fff) 96%, transparent) !important;' +
+        '--dsw-alias-bg-l2:color-mix(in srgb, var(--dsw-static-neutral-bluish-00,#fff) 95%, transparent) !important}' +
+        // 深色主题：用深色基色混合（覆盖上面的浅色混合）
+        'body[data-ds-dark-theme]{' +
+        '--dsw-alias-bg-layer-2:color-mix(in srgb, var(--dsw-static-neutral-bluish-950,#0b0e1a) 95%, transparent) !important;' +
+        '--dsw-alias-bg-layer-3:color-mix(in srgb, var(--dsw-static-neutral-bluish-950,#0b0e1a) 96%, transparent) !important;' +
+        '--dsw-alias-bg-layer-4:color-mix(in srgb, var(--dsw-static-neutral-bluish-950,#0b0e1a) 97%, transparent) !important;' +
+        '--dsw-alias-bg-module-platform:color-mix(in srgb, var(--dsw-static-neutral-bluish-950,#0b0e1a) 95%, transparent) !important;' +
+        '--dsw-specific-menu:color-mix(in srgb, var(--dsw-static-neutral-bluish-950,#0b0e1a) 96%, transparent) !important;' +
+        '--dsw-alias-bg-l2:color-mix(in srgb, var(--dsw-static-neutral-bluish-950,#0b0e1a) 95%, transparent) !important}' +
         // ③ 根元素背景直接透明（body 白底可能来自非令牌的字面色）
         'html,body{background:transparent !important}' +
         // ② 壁纸层：固定铺底、不拦截交互
@@ -70,12 +78,17 @@
 
   // ------------------------------------------------------------- 开屏动画 --
   var SPLASH_Z = 2147483000
+  // 每个预设：label 供面板下拉显示；css 里的 %T 会被替换为实际时长。
+  // cinematic 不走单条 CSS animation，而是 playSplash 里的多层编排（见下）。
   var ANIMS = {
-    'fade-zoom': 'dshat-anim-fade-zoom 2.2s ease-out forwards',
-    'slide-up': 'dshat-anim-slide-up 1.6s cubic-bezier(.2,.8,.2,1) forwards',
-    'flicker': 'dshat-anim-flicker 1.8s steps(12) forwards',
-    'none': 'none',
+    cinematic: { label: '电影质感（渐显+光扫+暗角）', css: null },
+    'fade-zoom': { label: '缩放渐显', css: 'dshat-anim-fade-zoom %T ease-out forwards' },
+    'slide-up': { label: '上浮', css: 'dshat-anim-slide-up %T cubic-bezier(.2,.8,.2,1) forwards' },
+    'flicker': { label: '闪烁', css: 'dshat-anim-flicker %T steps(12) forwards' },
+    'none': { label: '无动画', css: 'none' },
   }
+  // 电影质感的胶片颗粒：内联 SVG feTurbulence 噪声（零外部素材）
+  var GRAIN_URI = 'url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27160%27 height=%27160%27%3E%3Cfilter id=%27n%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%270.85%27 numOctaves=%272%27 stitchTiles=%27stitch%27/%3E%3CfeColorMatrix type=%27saturate%27 values=%270%27/%3E%3C/filter%3E%3Crect width=%27160%27 height=%27160%27 filter=%27url(%23n)%27 opacity=%270.55%27/%3E%3C/svg%3E")'
   function injectAnimCss() {
     if ($('#dshat-anim-style')) return
     var s = document.createElement('style')
@@ -90,11 +103,30 @@
       '@keyframes dshat-anim-flicker{0%{opacity:0}10%{opacity:1}18%{opacity:.2}' +
       '  26%{opacity:1}38%{opacity:.4}50%{opacity:1}80%{opacity:1}' +
       '  100%{opacity:0}}' +
+      // —— 电影质感（cinematic）专用帧：由暗到明逐帧渐显 + 缓慢推近 + 收尾淡入黑 ——
+      '@keyframes dshat-cine-img{0%{opacity:0;filter:brightness(.12) blur(18px) saturate(.5);transform:scale(1.16)}' +
+      '  16%{opacity:1}55%{filter:brightness(1) blur(0) saturate(1.05);transform:scale(1.03)}' +
+      '  80%{opacity:1;transform:scale(1.075)}' +
+      '  100%{opacity:0;filter:brightness(.25) blur(3px);transform:scale(1.1)}}' +
+      '@keyframes dshat-cine-shine{0%,30%{transform:translateX(-170%) skewX(-18deg);opacity:0}' +
+      '  42%{opacity:.9}64%,100%{transform:translateX(170%) skewX(-18deg);opacity:0}}' +
+      '@keyframes dshat-cine-bar-t{0%{transform:translateY(-101%)}14%,86%{transform:translateY(0)}100%{transform:translateY(-101%)}}' +
+      '@keyframes dshat-cine-bar-b{0%{transform:translateY(101%)}14%,86%{transform:translateY(0)}100%{transform:translateY(101%)}}' +
+      '@keyframes dshat-cine-grain{0%{transform:translate(0,0)}25%{transform:translate(-3%,2%)}' +
+      '  50%{transform:translate(2%,-3%)}75%{transform:translate(-2%,-1%)}100%{transform:translate(1%,3%)}}' +
       '#dshat-splash{position:fixed;inset:0;z-index:' + SPLASH_Z + ';' +
-      'display:flex;align-items:center;justify-content:center;background:#0b0e1a;' +
-      'cursor:pointer;transition:opacity .45s ease}' +
-      '#dshat-splash img{max-width:min(72vw,720px);max-height:78vh;object-fit:contain;' +
-      'border-radius:14px;box-shadow:0 24px 80px rgba(0,0,0,.55)}' +
+      'display:flex;align-items:center;justify-content:center;background:#04060e;' +
+      'cursor:pointer;transition:opacity .5s ease}' +
+      '#dshat-splash img{max-width:min(72vw,760px);max-height:74vh;object-fit:contain;' +
+      'border-radius:12px;box-shadow:0 30px 90px rgba(0,0,0,.6)}' +
+      '#dshat-splash .dshat-cine-mark{position:relative}' +
+      '#dshat-splash .dshat-cine-bar{position:absolute;left:0;right:0;height:7.5%;background:#000;z-index:3}' +
+      '#dshat-splash .dshat-cine-shineWrap{position:absolute;inset:-8% -20%;overflow:hidden;z-index:2;pointer-events:none}' +
+      '#dshat-splash .dshat-cine-shine{position:absolute;top:-30%;left:0;width:45%;height:160%;' +
+      'background:linear-gradient(100deg,transparent 20%,rgba(255,255,255,.38) 50%,transparent 80%);' +
+      'mix-blend-mode:screen;filter:blur(6px)}' +
+      '#dshat-splash .dshat-cine-grain{position:absolute;inset:-10%;z-index:2;pointer-events:none;opacity:.08;' +
+      'background-image:' + GRAIN_URI + ';background-size:160px 160px;mix-blend-mode:overlay}' +
       '#dshat-splash.dshat-out{opacity:0;pointer-events:none}'
     document.head.appendChild(s)
   }
@@ -115,22 +147,45 @@
       var img = el('img')
       img.alt = ''
       img.src = BASE + '/asset/splash?v=' + Date.now()
-      img.style.animation = ANIMS[cfg.splash.anim] || ANIMS['fade-zoom']
       img.onerror = function () { overlay.remove() }   // 素材缺失 → 直接跳过（fail-open）
-      overlay.appendChild(img)
+      var animKey = ANIMS[cfg.splash.anim] ? cfg.splash.anim : 'cinematic'
+      if (animKey === 'cinematic') {
+        // 电影质感 = 多层编排：黑场 → 逐帧渐显（亮度/模糊/饱和一起爬升）+ 缓慢推近
+        // → 中段斜向光扫 + 胶片颗粒 → 上下黑边夹住 → 收尾淡入黑，整体退场。
+        var mark = el('div'); mark.className = 'dshat-cine-mark'
+        img.style.animation = 'dshat-cine-img ' + ms + 'ms cubic-bezier(.3,.5,.25,1) forwards'
+        mark.appendChild(img)
+        var shineWrap = el('div'); shineWrap.className = 'dshat-cine-shineWrap'
+        var shine = el('div'); shine.className = 'dshat-cine-shine'
+        shine.style.animation = 'dshat-cine-shine ' + ms + 'ms ease-in-out forwards'
+        shineWrap.appendChild(shine); mark.appendChild(shineWrap)
+        var grain = el('div'); grain.className = 'dshat-cine-grain'
+        grain.style.animation = 'dshat-cine-grain .5s steps(4) infinite'
+        mark.appendChild(grain)
+        overlay.appendChild(mark)
+        var barT = el('div'); barT.className = 'dshat-cine-bar'; barT.style.top = '0'
+        barT.style.animation = 'dshat-cine-bar-t ' + ms + 'ms cubic-bezier(.6,0,.3,1) forwards'
+        var barB = el('div'); barB.className = 'dshat-cine-bar'; barB.style.bottom = '0'
+        barB.style.animation = 'dshat-cine-bar-b ' + ms + 'ms cubic-bezier(.6,0,.3,1) forwards'
+        overlay.appendChild(barT); overlay.appendChild(barB)
+      } else {
+        var a = ANIMS[animKey]
+        img.style.animation = a.css ? a.css.replace('%T', ms + 'ms') : 'none'
+        overlay.appendChild(img)
+      }
       document.body.appendChild(overlay)
       var closed = false
       function close() {
         if (closed) return
         closed = true
         overlay.classList.add('dshat-out')
-        setTimeout(function () { overlay.remove() }, 500)
+        setTimeout(function () { overlay.remove() }, 550)
         document.removeEventListener('keydown', onKey, true)
       }
       function onKey() { close() }
       overlay.addEventListener('click', close)
       document.addEventListener('keydown', onKey, true)
-      setTimeout(close, ms)
+      setTimeout(close, ms + 250)
     } catch (err) {}
   }
 
@@ -203,7 +258,7 @@
     fab.textContent = '🎨'
     fab.title = '二次元主题设置'
     fab.style.cssText =
-      'position:fixed;left:14px;bottom:14px;z-index:' + PANEL_Z + ';width:34px;height:34px;' +
+      'position:fixed;left:14px;bottom:52px;z-index:' + PANEL_Z + ';width:34px;height:34px;' +
       'border-radius:50%;border:1px solid rgba(120,140,200,.35);background:rgba(20,26,48,.72);' +
       'color:#dbe4ff;font-size:16px;line-height:1;cursor:pointer;backdrop-filter:blur(8px);' +
       'opacity:.55;transition:opacity .2s'
@@ -213,7 +268,7 @@
     var panel = el('div')
     panel.id = 'dshat-panel'
     panel.style.cssText =
-      'position:fixed;left:14px;bottom:56px;z-index:' + PANEL_Z + ';width:300px;display:none;' +
+      'position:fixed;left:14px;bottom:94px;z-index:' + PANEL_Z + ';width:300px;display:none;' +
       'border-radius:14px;border:1px solid rgba(120,140,200,.35);background:rgba(16,20,40,.92);' +
       'color:#dbe4ff;font-size:12px;padding:12px;backdrop-filter:blur(12px);' +
       'box-shadow:0 12px 40px rgba(0,0,0,.45)'
@@ -288,7 +343,7 @@
     var rS2 = row('图片'); rS2.appendChild(pick('splash')); sS.appendChild(rS2)
     var rS3 = row('动画'); var selA = el('select'); selA.style.cssText = 'flex:1'
     Object.keys(ANIMS).forEach(function (k) {
-      var o = el('option', null, k); o.value = k; selA.appendChild(o)
+      var o = el('option', null, ANIMS[k].label); o.value = k; selA.appendChild(o)
     })
     selA.value = cfg.splash.anim
     rS3.appendChild(selA); sS.appendChild(rS3)
