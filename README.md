@@ -85,7 +85,7 @@ dsh plugin --profile web add github:your-github-username/dsh-anime-theme
 
 ## 开屏视频素材小贴士
 
-视频模式直接用浏览器解码播放：**推荐 H.264 编码的 MP4**（HEVC/H.265 在部分 Chromium/Electron 环境无法软解）。若素材是 HEVC 或带水印/黑边，可先用 ffmpeg 处理后再上传，例如：
+视频模式直接用浏览器解码播放：**推荐 H.264 编码的 MP4**（HEVC/H.265 在部分 Chromium/Electron 环境无法软解）；本仓库示例素材为 2560×1440（Real-ESRGAN AI 超分）。若素材是 HEVC 或带水印/黑边，可先用 ffmpeg 处理后再上传，例如：
 
 ```bash
 # 裁掉左右黑边（各128px）+ 去除右上/左下/底部三处水印（delogo 区域按实际水印位置调整）+ 转 H.264
