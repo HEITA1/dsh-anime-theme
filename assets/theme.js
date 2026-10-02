@@ -293,25 +293,26 @@
     fab.title = '二次元主题设置'
     fab.style.cssText =
       'position:fixed;left:14px;bottom:52px;z-index:' + PANEL_Z + ';width:34px;height:34px;' +
-      'border-radius:50%;border:1px solid rgba(120,140,200,.35);background:rgba(20,26,48,.72);' +
-      'color:#dbe4ff;font-size:16px;line-height:1;cursor:pointer;backdrop-filter:blur(8px);' +
-      'opacity:.55;transition:opacity .2s'
+      'border-radius:50%;border:1px solid rgba(37,99,235,.45);background:rgba(224,239,255,.88);' +
+      'color:#1d4ed8;font-size:16px;line-height:1;cursor:pointer;backdrop-filter:blur(8px);' +
+      'box-shadow:0 4px 14px rgba(37,99,235,.25);opacity:.65;transition:opacity .2s'
     fab.addEventListener('mouseenter', function () { fab.style.opacity = '1' })
-    fab.addEventListener('mouseleave', function () { fab.style.opacity = '.55' })
+    fab.addEventListener('mouseleave', function () { fab.style.opacity = '.65' })
 
     var panel = el('div')
     panel.id = 'dshat-panel'
     panel.style.cssText =
       'position:fixed;left:14px;bottom:94px;z-index:' + PANEL_Z + ';width:300px;display:none;' +
-      'border-radius:14px;border:1px solid rgba(120,140,200,.35);background:rgba(16,20,40,.92);' +
-      'color:#dbe4ff;font-size:12px;padding:12px;backdrop-filter:blur(12px);' +
-      'box-shadow:0 12px 40px rgba(0,0,0,.45)'
+      'border-radius:14px;border:1px solid rgba(37,99,235,.35);background:rgba(235,244,255,.96);' +
+      'color:#16385f;font-size:12px;padding:12px;backdrop-filter:blur(12px);' +
+      'accent-color:#2563eb;' +
+      'box-shadow:0 12px 40px rgba(37,99,235,.28)'
 
     function section(title) {
       var s = el('div')
       s.style.cssText = 'margin-bottom:10px'
       var t = el('div', null, title)
-      t.style.cssText = 'font-weight:600;margin-bottom:6px;color:#aebbe8'
+      t.style.cssText = 'font-weight:600;margin-bottom:6px;color:#1d4ed8'
       s.appendChild(t)
       return s
     }
@@ -320,7 +321,7 @@
       r.style.cssText = 'display:flex;align-items:center;gap:6px;margin:4px 0'
       if (label) {
         var l = el('span', null, label)
-        l.style.cssText = 'flex:0 0 64px;color:#9fb0d9'
+        l.style.cssText = 'flex:0 0 64px;color:#3a5c8f'
         r.appendChild(l)
       }
       return r
@@ -366,11 +367,11 @@
     var rW1 = row('启用'); var cW = check(cfg.wallpaper.on); rW1.appendChild(cW); sW.appendChild(rW1)
     var rW2 = row('图片'); rW2.appendChild(pick('wallpaper')); sW.appendChild(rW2)
     var rW3 = row('透明度'); var sO = slider(0, 1, 0.05, cfg.wallpaper.opacity)
-    var oVal = el('span', null, String(cfg.wallpaper.opacity)); oVal.style.cssText = 'width:30px;text-align:right'
+    var oVal = el('span', null, String(cfg.wallpaper.opacity)); oVal.style.cssText = 'width:30px;text-align:right;color:#3a5c8f'
     sO.addEventListener('input', function () { oVal.textContent = sO.value })
     rW3.appendChild(sO); rW3.appendChild(oVal); sW.appendChild(rW3)
     var rW4 = row('模糊'); var sB = slider(0, 40, 1, cfg.wallpaper.blur)
-    var bVal = el('span', null, String(cfg.wallpaper.blur)); bVal.style.cssText = 'width:30px;text-align:right'
+    var bVal = el('span', null, String(cfg.wallpaper.blur)); bVal.style.cssText = 'width:30px;text-align:right;color:#3a5c8f'
     sB.addEventListener('input', function () { bVal.textContent = sB.value })
     rW4.appendChild(sB); rW4.appendChild(bVal); sW.appendChild(rW4)
     panel.appendChild(sW)
@@ -379,19 +380,21 @@
     var sS = section('✨ 开屏动画')
     var rS1 = row('启用'); var cS = check(cfg.splash.on); rS1.appendChild(cS); sS.appendChild(rS1)
     var rS2 = row('图片'); rS2.appendChild(pick('splash')); sS.appendChild(rS2)
-    var rS3 = row('动画'); var selA = el('select'); selA.style.cssText = 'flex:1'
+    var rS3 = row('动画'); var selA = el('select'); selA.style.cssText = 'flex:1;background:#fff;border:1px solid rgba(37,99,235,.35);border-radius:6px;color:#16385f;padding:2px 4px'
     Object.keys(ANIMS).forEach(function (k) {
       var o = el('option', null, ANIMS[k].label); o.value = k; selA.appendChild(o)
     })
     selA.value = cfg.splash.anim
     rS3.appendChild(selA); sS.appendChild(rS3)
     var rS4 = row('时长ms'); var iM = el('input'); iM.type = 'number'; iM.min = 600; iM.max = 15000
-    iM.value = cfg.splash.ms; iM.style.cssText = 'flex:1;width:60px'
+    iM.value = cfg.splash.ms; iM.style.cssText = 'flex:1;width:60px;background:#fff;border:1px solid rgba(37,99,235,.35);border-radius:6px;color:#16385f;padding:2px 4px'
     rS4.appendChild(iM); sS.appendChild(rS4)
     var rS5 = row(''); var cOnce = check(cfg.splash.oncePerSession)
     rS5.appendChild(cOnce)
     rS5.appendChild(el('span', null, '每次会话只播一次'))
-    var btnRe = el('button', null, '重放'); btnRe.style.cssText = 'margin-left:auto;cursor:pointer'
+    var btnRe = el('button', null, '重放'); btnRe.style.cssText = 'margin-left:auto;cursor:pointer;background:#e0edff;color:#1d4ed8;border:1px solid rgba(37,99,235,.35);border-radius:6px;padding:3px 10px'
+    btnRe.addEventListener('mouseenter', function () { btnRe.style.background = '#cfe2ff' })
+    btnRe.addEventListener('mouseleave', function () { btnRe.style.background = '#e0edff' })
     btnRe.addEventListener('click', function () { save().then(function () { window.__dshAT_replaySplash() }) })
     rS5.appendChild(btnRe); sS.appendChild(rS5)
     panel.appendChild(sS)
@@ -402,14 +405,16 @@
     var rI2 = row('图片'); rI2.appendChild(pick('icon')); sI.appendChild(rI2)
     var rI3 = row('选择器'); var iSel = el('input'); iSel.type = 'text'
     iSel.value = cfg.icon.selector || ''; iSel.placeholder = 'CSS 选择器（高级，可留空）'
-    iSel.style.cssText = 'flex:1;min-width:0;background:rgba(255,255,255,.06);border:1px solid rgba(120,140,200,.3);border-radius:6px;color:#dbe4ff;padding:2px 4px'
+    iSel.style.cssText = 'flex:1;min-width:0;background:#fff;border:1px solid rgba(37,99,235,.35);border-radius:6px;color:#16385f;padding:2px 4px'
     rI3.appendChild(iSel); sI.appendChild(rI3)
     panel.appendChild(sI)
 
     // 总开关 + 保存
     var rAll = row('总开关'); var cAll = check(cfg.enabled); rAll.appendChild(cAll)
     var btnSave = el('button', null, '保存并应用')
-    btnSave.style.cssText = 'margin-left:auto;cursor:pointer;background:#2f4488;color:#fff;border:none;border-radius:6px;padding:4px 10px'
+    btnSave.style.cssText = 'margin-left:auto;cursor:pointer;background:#2563eb;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-weight:600'
+    btnSave.addEventListener('mouseenter', function () { btnSave.style.background = '#1d4ed8' })
+    btnSave.addEventListener('mouseleave', function () { btnSave.style.background = '#2563eb' })
     rAll.appendChild(btnSave)
     panel.appendChild(rAll)
 
