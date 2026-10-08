@@ -37,11 +37,22 @@
         styleEl.id = 'dshat-style'
         document.head.appendChild(styleEl)
       }
-      if (!cfg || !cfg.enabled || !cfg.wallpaper || !cfg.wallpaper.on || !cfg.wallpaper.file) {
+      if (!cfg || !cfg.enabled || !cfg.wallpaper || !cfg.wallpaper.on) {
         styleEl.textContent = ''
         return
       }
       var w = cfg.wallpaper
+      // 渐变模式：无图片素材时用 CSS 渐变铺底（优先级：图片 > 渐变）
+      var bgLayer = ''
+      if (w.file) {
+        bgLayer = 'background:url(' + BASE + '/asset/wallpaper?v=' + Date.now() + ') center/cover no-repeat;'
+      } else if (w.gradient && w.gradient.on && w.gradient.colors && w.gradient.colors.length >= 2) {
+        var cs = w.gradient.colors.join(',')
+        bgLayer = 'background:linear-gradient(' + (Math.round(+w.gradient.angle || 135)) + 'deg,' + cs + ');'
+      } else {
+        styleEl.textContent = ''
+        return
+      }
       styleEl.textContent =
         // ① 分层透明化：主界面（base/layer-1/侧栏底色）透出壁纸；
         //    二级窗口（layer-2/3/4、菜单）用 color-mix 保持 95-97% 近实底，保证弹窗文字可读。
@@ -67,9 +78,9 @@
         '--dsw-alias-bg-l2:color-mix(in srgb, var(--dsw-static-neutral-bluish-950,#0b0e1a) 95%, transparent) !important}' +
         // ③ 根元素背景直接透明（body 白底可能来自非令牌的字面色）
         'html,body{background:transparent !important}' +
-        // ② 壁纸层：固定铺底、不拦截交互
+        // ② 壁纸层：固定铺底、不拦截交互（图片或渐变二选一）
         'body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;' +
-        'background:url(' + BASE + '/asset/wallpaper?v=' + Date.now() + ') center/cover no-repeat;' +
+        bgLayer +
         'opacity:' + (+w.opacity || 0) + ';' +
         (w.blur > 0 ? 'filter:blur(' + (+w.blur) + 'px);' : '') +
         '}'
@@ -374,6 +385,57 @@
     var bVal = el('span', null, String(cfg.wallpaper.blur)); bVal.style.cssText = 'width:30px;text-align:right;color:#3a5c8f'
     sB.addEventListener('input', function () { bVal.textContent = sB.value })
     rW4.appendChild(sB); rW4.appendChild(bVal); sW.appendChild(rW4)
+    // 渐变壁纸：无图片素材时的纯 CSS 铺底（预设色卡 + 双色自定义）
+    if (!cfg.wallpaper.gradient) cfg.wallpaper.gradient = { on: false, colors: ['#7aa5e8', '#c7e0ff'], angle: 135 }
+    var GRAD_PRESETS = [
+      ['#7aa5e8', '#c7e0ff'],   // 晴空
+      ['#a8c0ff', '#3b2f63'],   // 暮霭
+      ['#fbc2eb', '#a6c1ee'],   // 樱色
+      ['#89f7fe', '#66a6ff'],   // 海风
+      ['#fddb92', '#d1fdff'],   // 晨雾
+      ['#30cfd0', '#330867'],   // 深海
+    ]
+    var rW5 = row('渐变'); var cG = check(cfg.wallpaper.gradient.on); rW5.appendChild(cG)
+    var gradSwatches = el('span')
+    gradSwatches.style.cssText = 'display:inline-flex;gap:4px;margin-left:2px'
+    GRAD_PRESETS.forEach(function (p) {
+      var sw = el('span')
+      sw.style.cssText = 'width:16px;height:16px;border-radius:4px;cursor:pointer;border:1px solid rgba(37,99,235,.35);' +
+        'background:linear-gradient(135deg,' + p[0] + ',' + p[1] + ')'
+      sw.title = p[0] + ' → ' + p[1]
+      sw.addEventListener('click', function () {
+        cfg.wallpaper.gradient.colors = p.slice()
+        iC1.value = p[0]; iC2.value = p[1]
+        cG.checked = true
+        save()
+      })
+      gradSwatches.appendChild(sw)
+    })
+    rW5.appendChild(gradSwatches)
+    sW.appendChild(rW5)
+    var rW6 = row('渐变色')
+    var iC1 = el('input'); iC1.type = 'color'; iC1.value = cfg.wallpaper.gradient.colors[0]
+    var iC2 = el('input'); iC2.type = 'color'; iC2.value = cfg.wallpaper.gradient.colors[1]
+    iC1.style.cssText = iC2.style.cssText = 'width:26px;height:22px;padding:0;border:none;background:none;cursor:pointer'
+    var iAng = el('input'); iAng.type = 'number'; iAng.min = 0; iAng.max = 360
+    iAng.value = cfg.wallpaper.gradient.angle
+    iAng.title = '渐变角度'
+    iAng.style.cssText = 'width:44px;background:#fff;border:1px solid rgba(37,99,235,.35);border-radius:6px;color:#16385f;padding:2px 3px'
+    var gradApply = function () {
+      cfg.wallpaper.gradient.on = cG.checked
+      cfg.wallpaper.gradient.colors = [iC1.value, iC2.value]
+      cfg.wallpaper.gradient.angle = Math.min(360, Math.max(0, +iAng.value || 135))
+      save()
+    }
+    cG.addEventListener('change', gradApply)
+    iC1.addEventListener('change', gradApply)
+    iC2.addEventListener('change', gradApply)
+    iAng.addEventListener('change', gradApply)
+    rW6.appendChild(iC1); rW6.appendChild(iC2); rW6.appendChild(iAng)
+    var gradHint = el('span', null, '无图片时生效')
+    gradHint.style.cssText = 'color:#8aa8cf;font-size:10px;margin-left:auto'
+    rW6.appendChild(gradHint)
+    sW.appendChild(rW6)
     panel.appendChild(sW)
 
     // 开屏区
@@ -409,14 +471,64 @@
     rI3.appendChild(iSel); sI.appendChild(rI3)
     panel.appendChild(sI)
 
-    // 总开关 + 保存
+    // 总开关 + 导出/导入 + 保存
     var rAll = row('总开关'); var cAll = check(cfg.enabled); rAll.appendChild(cAll)
+    var btnExport = el('button', null, '导出主题包')
+    btnExport.style.cssText = 'margin-left:auto;cursor:pointer;background:#e0edff;color:#1d4ed8;border:1px solid rgba(37,99,235,.35);border-radius:6px;padding:4px 10px'
+    btnExport.addEventListener('mouseenter', function () { btnExport.style.background = '#cfe2ff' })
+    btnExport.addEventListener('mouseleave', function () { btnExport.style.background = '#e0edff' })
+    btnExport.title = '把当前主题配置与素材打包为一个 .json 文件分享'
+    btnExport.addEventListener('click', function () {
+      fetchJSON(BASE + '/pack.json').then(function (pack) {
+        if (!pack || pack.format !== 'dsh-anime-theme-pack') { alert('导出失败'); return }
+        var blob = new Blob([JSON.stringify(pack)], { type: 'application/json' })
+        var a = el('a')
+        a.href = URL.createObjectURL(blob)
+        var d = new Date()
+        var pad = function (n) { return (n < 10 ? '0' : '') + n }
+        a.download = 'anime-theme-' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '.json'
+        document.body.appendChild(a); a.click(); a.remove()
+        setTimeout(function () { URL.revokeObjectURL(a.href) }, 3000)
+      }).catch(function (e) { alert('导出失败：' + e) })
+    })
+    var fImport = el('input'); fImport.type = 'file'; fImport.accept = 'application/json,.json'
+    fImport.style.display = 'none'
+    var btnImport = el('button', null, '导入主题包')
+    btnImport.style.cssText = 'margin-left:6px;cursor:pointer;background:#e0edff;color:#1d4ed8;border:1px solid rgba(37,99,235,.35);border-radius:6px;padding:4px 10px'
+    btnImport.addEventListener('mouseenter', function () { btnImport.style.background = '#cfe2ff' })
+    btnImport.addEventListener('mouseleave', function () { btnImport.style.background = '#e0edff' })
+    btnImport.title = '导入一个分享的 .json 主题包（素材与配置一并还原）'
+    btnImport.addEventListener('click', function () { fImport.click() })
+    fImport.addEventListener('change', function () {
+      var file = fImport.files && fImport.files[0]
+      if (!file) return
+      if (file.size > 96 * 1024 * 1024) { alert('主题包超过 96MB 上限'); return }
+      file.text().then(function (txt) {
+        return fetchJSON(BASE + '/pack.json', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: txt,
+        })
+      }).then(function (j) {
+        if (j.ok) {
+          cfg = j.config
+          refreshAll()
+          alert('导入成功' + (j.imported && j.imported.length ? '（含 ' + j.imported.length + ' 个素材）' : ''))
+          location.reload()
+        } else {
+          alert('导入失败：' + (j.error || '格式不符'))
+        }
+      }).catch(function (e) { alert('导入失败：' + e) })
+    })
     var btnSave = el('button', null, '保存并应用')
     btnSave.style.cssText = 'margin-left:auto;cursor:pointer;background:#2563eb;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-weight:600'
     btnSave.addEventListener('mouseenter', function () { btnSave.style.background = '#1d4ed8' })
     btnSave.addEventListener('mouseleave', function () { btnSave.style.background = '#2563eb' })
+    rAll.appendChild(btnExport)
+    rAll.appendChild(btnImport)
     rAll.appendChild(btnSave)
     panel.appendChild(rAll)
+    panel.appendChild(fImport)
 
     function collect() {
       cfg.enabled = cAll.checked
@@ -452,7 +564,9 @@
     })
 
     fab.addEventListener('click', function () {
-      panel.style.display = panel.style.display === 'none' ? 'block' : 'none'
+      const opening = panel.style.display === 'none'
+      panel.style.display = opening ? 'block' : 'none'
+      if (opening) refreshAll()   // 每次打开面板时重放壁纸/图标样式（自愈：配置或素材文件变化后即时生效）
     })
 
     document.body.appendChild(fab)

@@ -91,3 +91,7 @@ dsh plugin --profile web add github:your-github-username/dsh-anime-theme
 # 裁掉左右黑边（各128px）+ 去除右上/左下/底部三处水印（delogo 区域按实际水印位置调整）+ 转 H.264
 ffmpeg -i in.mp4 -vf "crop=1024:576:128:0, delogo=x=772:y=10:w=246:h=56, delogo=x=2:y=540:w=95:h=34, delogo=x=450:y=515:w=135:h=38" -c:v libx264 -crf 20 -preset veryfast -pix_fmt yuv420p -an -movflags +faststart splash_clean.mp4
 ```
+
+## 主题包分享
+
+设置面板底部「导出主题包」会把**当前配置 + 全部在用素材**（图片/视频，base64 内联）打包成单个 `.json` 文件下载；把文件发给别人，对方点「导入主题包」选择该文件即可完整还原（导入时逐项校验：格式标识、MIME 与扩展名一致、魔数嗅探防伪造、单素材 ≤64MB）。主题包内不含任何凭据或本机路径。
